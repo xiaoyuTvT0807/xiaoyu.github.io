@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>大招能量计算器</title>
+    <style>
+        :root {
+            --primary: #4f6ef7;
+            --primary-bg: #f0f3ff;
+            --bg: #f5f6fa;
+            --card: #fff;
+            --text: #1a1d26;
+            --text-2: #5a6178;
+            --text-3: #8e95a9;
+            --border: #e8eaf0;
+            --green: #22c55e;
+            --orange: #f59e0b;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; outline:none; }
+        html,body { width:100%; height:100%; overflow:hidden; font-size:12px; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            background-image: 
+                radial-gradient(ellipse at 30% 20%, rgba(79,110,247,.06) 0%, transparent 50%),
+                radial-gradient(ellipse at 70% 80%, rgba(139,92,246,.04) 0%, transparent 50%);
+            color: var(--text);
+            display: flex; flex-direction: column;
+            -webkit-font-smoothing: antialiased;
+            -webkit-user-select: none; user-select: none;
+        }
+
+        .header {
+            flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+            padding: 8px 14px; background: var(--card); border-bottom: 1px solid var(--border);
+        }
+        .header h1 { font-size:.9rem; font-weight:700; }
+        .header .sub { font-size:.6rem; color:var(--text-3); }
+
+        .tabs-bar {
+            flex-shrink: 0; padding: 6px 14px; background: var(--card); border-bottom: 1px solid var(--border);
+        }
+        .tabs {
+            display: inline-flex; gap: 2px; background: #f0f1f5;
+            padding: 3px; border-radius: 8px; position: relative;
+        }
+        .tab {
+            padding: 6px 20px; border: none; background: transparent;
+            border-radius: 6px; font-size: .75rem; color: var(--text-2);
+            cursor: pointer; font-weight: 500; position: relative; z-index: 1;
+        }
+        .tab.active { color:#fff; }
+        .tab-indicator {
+            position: absolute; height: calc(100% - 6px); top: 3px; left: 3px;
+            background: linear-gradient(135deg, var(--primary), #6b7ff7);
+            border-radius: 6px; box-shadow: 0 2px 6px rgba(79,110,247,.25);
+            transition: all .2s; z-index: 0;
+        }
+
+        .main { flex: 1; overflow: hidden; padding: 10px 14px; }
+        .mode { display: none; height: 100%; gap: 10px; }
+        .mode.active { display: grid; grid-template-columns: 1fr 1fr; }
+        @media (max-width: 700px) { .mode.active { grid-template-columns: 1fr; overflow-y: auto; } }
+
+        .col { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; min-height: 0; }
+
+        .card {
+            background: var(--card); border-radius: 12px; padding: 12px;
+            box-shadow: 0 1px 4px rgba(0,0,0,.05); border: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+        .card-title {
+            font-size: .7rem; font-weight: 600; margin-bottom: 10px;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .card-title::before {
+            content: ''; width: 3px; height: 12px;
+            background: linear-gradient(180deg, var(--primary), #6b7ff7);
+            border-radius: 2px;
+        }
+
+        .g3 { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
+        .g2 { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+
+        .field {
+            display:flex; flex-direction:column; gap:2px;
+            padding: 5px 7px; border-radius: 8px; transition: background .15s;
+        }
+        .field.focus { background: var(--primary-bg); }
+        .field label {
+            font-size:.58rem; color:var(--text-3); font-weight:500; pointer-events: none;
+            transition: color .15s;
+        }
+        .field.focus label { color: var(--primary); font-weight: 600; }
+        .field input {
+            padding: 4px 0; border: none; border-bottom: 1px solid #eee;
+            font-size: .78rem; background: transparent; color: var(--text);
+            caret-color: var(--primary); transition: border-color .15s;
+        }
+        .field.focus input { border-color: var(--primary); }
+        .field input:focus { outline: none; }
+
+        .checks { display:flex; flex-wrap:wrap; gap:5px; margin-top:8px; }
+        .chk {
+            display:flex; align-items:center; gap:4px;
+            padding: 5px 9px; background: #f7f8fc; border-radius: 8px;
+            font-size: .68rem; cursor: pointer; border: 1px solid #eee; color: var(--text-2);
+        }
+        .chk:has(input:checked) {
+            background: var(--primary-bg); border-color: rgba(79,110,247,.2);
+            color: var(--primary); font-weight: 600;
+        }
+        .chk input { accent-color:var(--primary); width:13px; height:13px; }
+
+        .rlist { display:flex; flex-direction:column; gap:4px; }
+        .ritem {
+            display:flex; align-items:center; gap:8px;
+            padding: 8px 10px; border-radius: 10px; cursor: pointer;
+            font-size: .72rem; background: #f7f8fc; border: 1px solid #eee; color: var(--text-2);
+        }
+        .ritem:hover { border-color: rgba(79,110,247,.2); }
+        .ritem.active { background: var(--primary-bg); border-color: rgba(79,110,247,.25); color: var(--text); font-weight: 500; }
+        .ritem input { display:none; }
+        .ritem::before {
+            content:''; width:14px; height:14px;
+            border:2px solid #ccc; border-radius:50%; flex-shrink:0;
+        }
+        .ritem.active::before { border-color: var(--primary); border-width: 5px; }
+
+        .nitro-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:5px; margin:8px 0; }
+        .nitro {
+            padding: 8px 4px; text-align: center; background: #f7f8fc;
+            border-radius: 10px; cursor: pointer; border: 1.5px solid #eee;
+        }
+        .nitro.active { border-color: var(--primary); background: var(--primary-bg); }
+        .nitro .n1 { font-size:.65rem; font-weight:600; }
+        .nitro.active .n1 { color:var(--primary); }
+        .nitro .n2 { font-size:.52rem; color:var(--text-3); margin:2px 0; }
+        .nitro .n3 { font-size:.82rem; font-weight:700; color:var(--primary); }
+
+        .btns { display:flex; gap:6px; margin-top:10px; }
+        .btn {
+            flex:1; padding:8px; border:none; border-radius:10px;
+            font-size:.78rem; font-weight:600; cursor:pointer;
+        }
+        .btn-s { background: #f0f1f5; color: var(--text); border: 1px solid #e0e2e8; }
+
+        .result { flex: 1; display: flex; flex-direction: column; }
+
+        .instant-box {
+            text-align: center; padding: 24px 16px;
+            background: #f0fdf4; border-radius: 12px;
+            border: 1px solid rgba(34,197,94,.2);
+        }
+        .instant-box .icon {
+            width: 48px; height: 48px; margin: 0 auto 10px;
+            background: linear-gradient(135deg, var(--green), #4ade80);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            color: #fff; font-weight: 700; font-size: 1.2rem;
+            box-shadow: 0 4px 12px rgba(34,197,94,.25);
+        }
+        .instant-box .big { font-size: 1.6rem; font-weight: 700; color: var(--green); }
+        .instant-box .desc { font-size: .72rem; color: var(--text-2); margin-top: 6px; }
+
+        .main-stat {
+            text-align: center; padding: 18px;
+            background: linear-gradient(135deg, var(--primary), #6b7ff7);
+            border-radius: 12px; color: #fff;
+            box-shadow: 0 4px 14px rgba(79,110,247,.25);
+        }
+        .main-stat .big { font-size: 2rem; font-weight: 700; line-height: 1; }
+        .main-stat .label { font-size: .68rem; opacity: .9; margin-top: 6px; }
+
+        .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+        .detail-item {
+            padding: 10px; background: #f7f8fc; border-radius: 10px; border: 1px solid #eee;
+        }
+        .detail-item .val { font-size: 1rem; font-weight: 700; color: var(--primary); }
+        .detail-item .lbl { font-size: .58rem; color: var(--text-3); margin-top: 3px; }
+
+        .diff-table { width: 100%; font-size: .65rem; border-collapse: collapse; table-layout: fixed; }
+        .diff-table th {
+            padding: 7px 8px; background: #f7f8fc; border-bottom: 1px solid #eee;
+            font-weight: 600; color: var(--text-2); text-align: left; font-size: .6rem;
+        }
+        .diff-table th:first-child { width: 60px; }
+        .diff-table th:nth-child(2) { width: 70px; }
+        .diff-table td { padding: 7px 8px; border-bottom: 1px solid #f0f1f5; text-align: left; }
+        .diff-table td:first-child { font-weight: 600; color: var(--primary); }
+        .diff-table tr:last-child td { border-bottom: none; }
+
+        .tbl-wrap {
+            overflow: auto; border-radius: 10px; border: 1px solid #eee;
+            flex: 1; min-height: 0;
+        }
+        table { width:100%; font-size:.68rem; border-collapse:collapse; }
+        th {
+            font-weight:600; padding:7px 5px; border-bottom:2px solid #eee;
+            font-size:.6rem; text-transform:uppercase; background:#f7f8fc; color:var(--text-2);
+            position:sticky; top:0; z-index:1;
+        }
+        td { padding:6px 5px; text-align:center; border-bottom:1px solid #f0f1f5; }
+        tr:last-child td { border-bottom:none; }
+        .hl { color:var(--primary); font-weight:700; }
+        .c-green { color:var(--green); font-weight:600; }
+        .c-orange { color:var(--orange); font-weight:600; }
+        .c-gray { color:var(--text-3); }
+
+        .tip {
+            margin-top:6px; padding:7px 10px;
+            background: #f7f8fc; border-radius: 8px;
+            font-size:.6rem; color:var(--text-2);
+        }
+
+        .fab {
+            position:fixed; right:12px; bottom:12px;
+            width:42px; height:42px;
+            background: linear-gradient(135deg, var(--primary), #6b7ff7);
+            border-radius: 50%; display:flex; align-items:center; justify-content:center;
+            color:#fff; cursor:pointer;
+            box-shadow: 0 4px 14px rgba(79,110,247,.3);
+            z-index:100; border:none;
+        }
+        .fab:active { transform:scale(.92); }
+
+        .drawer {
+            position:fixed; right:-260px; top:0;
+            width:240px; height:100vh; background: #fff;
+            box-shadow: -4px 0 20px rgba(0,0,0,.08);
+            z-index:99; transition:right .25s;
+            display:flex; flex-direction:column;
+            border-left: 1px solid var(--border);
+        }
+        .drawer.open { right:0; }
+        .drawer-head {
+            padding:14px; font-size:.85rem; font-weight:600;
+            border-bottom:1px solid #eee;
+            display:flex; justify-content:space-between; align-items:center;
+        }
+        .drawer-body { flex:1; overflow-y:auto; padding:10px; }
+        .h-entry {
+            padding:10px; background:#f7f8fc; border-radius:10px;
+            margin-bottom:6px; cursor:pointer; border:1px solid #eee;
+        }
+        .h-entry:hover { background:var(--primary-bg); border-color:rgba(79,110,247,.2); }
+        .h-entry .t { font-size:.6rem; color:var(--text-3); }
+        .h-entry .r { font-size:.75rem; color:var(--primary); font-weight:600; margin-top:3px; }
+
+        .backdrop {
+            position:fixed; inset:0; background:rgba(0,0,0,0);
+            z-index:98; visibility:hidden; transition:all .25s;
+        }
+        .backdrop.show { visibility:visible; background:rgba(0,0,0,.2); }
+
+        .hide { display:none!important; }
+
+        ::-webkit-scrollbar { width:4px; height:4px; }
+        ::-webkit-scrollbar-track { background:transparent; }
+        ::-webkit-scrollbar-thumb { background:#ddd; border-radius:2px; }
+        ::-webkit-scrollbar-thumb:hover { background:#bbb; }
+
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
+        input[type="number"] { -moz-appearance:textfield; }
+    </style>
+</head>
+<body>
+
+<header class="header">
+    <h1>大招能量计算器</h1>
+    <span class="sub">寒小屿 · 3892890744</span>
+</header>
+
+<div class="tabs-bar">
+    <div class="tabs" id="tabs">
+        <div class="tab-indicator" id="indicator"></div>
+        <button class="tab active" data-m="normal" data-i="0">排位</button>
+        <button class="tab" data-m="solo" data-i="1">单刷</button>
+    </div>
+</div>
+
+<div class="main">
+    <div class="mode active" id="normalMode">
+        <div class="col">
+            <div class="card">
+                <div class="card-title">基础参数</div>
+                <div class="g3">
+                    <div class="field" data-group="normal"><label>起步充能</label><input type="number" id="nStart" step="0.01" placeholder="0"></div>
+                    <div class="field" data-group="normal"><label>氮气充能</label><input type="number" id="nNitro" step="0.01" placeholder="0"></div>
+                    <div class="field" data-group="normal"><label>反制%</label><input type="number" id="nCnt" step="0.01" placeholder="0"></div>
+                    <div class="field" data-group="normal"><label>汇能%</label><input type="number" id="nHui" step="0.01" placeholder="0"></div>
+                    <div class="field" data-group="normal"><label>先机%</label><input type="number" id="nXian" step="0.01" placeholder="0"></div>
+                    <div class="field" data-group="normal"><label>释放阈值</label><input type="number" id="nMax" value="100" step="0.01"></div>
+                </div>
+                <div class="checks">
+                    <label class="chk"><input type="checkbox" id="nSpec" data-group="normal">专精+10</label>
+                    <label class="chk"><input type="checkbox" id="nJJ" data-group="normal">拒绝溢出+5%</label>
+                </div>
+                <div class="field" style="margin-top:5px" data-group="normal"><label>能量效率%</label><input type="number" id="nEff" value="0" step="0.01"></div>
+            </div>
+            <div class="card">
+                <div class="card-title">排位赋能</div>
+                <div class="rlist" id="nEmp">
+                    <label class="ritem active"><input type="radio" name="emp" value="0" checked><span>无</span></label>
+                    <label class="ritem"><input type="radio" name="emp" value="7"><span>花信风 (+7)</span></label>
+                    <label class="ritem"><input type="radio" name="emp" value="c"><span>自定义</span></label>
+                </div>
+                <div class="g2 hide" id="nCustom" style="margin-top:6px">
+                    <div class="field" data-group="normal"><label>自定义能量</label><input type="number" id="nCE" step="0.01"></div>
+                    <div class="field" data-group="normal"><label>自定义秒数</label><input type="number" id="nCS" step="0.1"></div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-title">氮气类型</div>
+                <div class="nitro-grid" id="nNitroType">
+                    <div class="nitro active" data-r="1"><div class="n1">1x6/1x5</div><div class="n2">100%</div><div class="n3" id="nv1">--</div></div>
+                    <div class="nitro" data-r="0.5"><div class="n1">2x2</div><div class="n2">50%</div><div class="n3" id="nv2">--</div></div>
+                    <div class="nitro" data-r="0.3333333333333333"><div class="n1">3x2</div><div class="n2">33%</div><div class="n3" id="nv3">--</div></div>
+                </div>
+                <div class="btns"><button class="btn btn-s" onclick="clearAll()">清空</button></div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card result" id="nResult">
+                <div class="card-title">计算结果</div>
+                <div class="instant-box hide" id="nInstant">
+                    <div class="icon">!</div>
+                    <div class="big">可秒大</div>
+                    <div class="desc">起步能量已满，无需放氮气</div>
+                </div>
+                <div class="hide" id="nNeedWrap">
+                    <div class="main-stat">
+                        <div class="big" id="nRes">0</div>
+                        <div class="label">需要氮气罐数</div>
+                    </div>
+                    <div class="detail-grid" style="margin-top:10px">
+                        <div class="detail-item"><div class="val" id="nSE">0</div><div class="lbl">起步能量</div></div>
+                        <div class="detail-item"><div class="val" id="nSig">0</div><div class="lbl">单罐能量</div></div>
+                        <div class="detail-item"><div class="val" id="nOver">0</div><div class="lbl">溢出能量</div></div>
+                        <div class="detail-item"><div class="val" id="nGap">0</div><div class="lbl">总缺口</div></div>
+                    </div>
+                    <div class="card-title" style="margin-top:12px">差额明细</div>
+                    <table class="diff-table">
+                        <thead><tr><th>差几罐</th><th>还差能量</th><th>说明</th></tr></thead>
+                        <tbody id="nDiffTbl"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mode" id="soloMode">
+        <div class="col">
+            <div class="card">
+                <div class="card-title">单刷参数</div>
+                <div class="g3">
+                    <div class="field" data-group="solo"><label>起步能量</label><input type="number" id="sStart" step="0.01"></div>
+                    <div class="field" data-group="solo"><label>氮气充能</label><input type="number" id="sNitro" step="0.01"></div>
+                    <div class="field" data-group="solo"><label>先机%</label><input type="number" id="sXian" step="0.01"></div>
+                    <div class="field" data-group="solo"><label>汇能%</label><input type="number" id="sHui" step="0.01"></div>
+                    <div class="field" data-group="solo"><label>大招阈值</label><input type="number" id="sThr" value="100" step="0.5"></div>
+                    <div class="field" data-group="solo"><label>释放恢复</label><input type="number" id="sBaseRet" value="0" step="0.1"></div>
+                </div>
+                <div class="g2" style="margin-top:6px">
+                    <div class="field" data-group="solo"><label>每N次完成</label><input type="number" id="sRetInt" value="2" min="1" step="1"></div>
+                    <div class="field" data-group="solo"><label>额外获得</label><input type="number" id="sRetAmt" value="0" step="0.1"></div>
+                </div>
+                <div class="checks" style="margin-top:8px">
+                    <label class="chk"><input type="checkbox" id="sSpec" data-group="solo">专精+10</label>
+                    <label class="chk"><input type="number" id="sMax" value="9" min="1" max="30" style="width:34px;border:none;background:0;font-size:.78rem;color:var(--text);text-align:center;padding:0" data-group="solo">个大招</label>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-title">氮气类型</div>
+                <div class="nitro-grid" id="sNitroType">
+                    <div class="nitro active" data-r="1"><div class="n1">1x6/1x5</div><div class="n2">100%</div><div class="n3" id="sv1">--</div></div>
+                    <div class="nitro" data-r="0.5"><div class="n1">2x2</div><div class="n2">50%</div><div class="n3" id="sv2">--</div></div>
+                    <div class="nitro" data-r="0.3333333333333333"><div class="n1">3x2</div><div class="n2">33%</div><div class="n3" id="sv3">--</div></div>
+                </div>
+                <div class="btns"><button class="btn btn-s" onclick="clearAll()">清空</button></div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card result" id="sResult" style="flex:1;display:flex;flex-direction:column">
+                <div class="card-title"><span>连续大招模拟</span><span id="sTotal" style="margin-left:auto;font-size:.62rem;color:var(--text-3);font-weight:400">0罐</span></div>
+                <div class="tbl-wrap" id="sTblWrap">
+                    <table>
+                        <thead><tr><th>序号</th><th>需氮气</th><th>单罐</th><th>释放</th><th>溢出</th><th>释放恢复</th><th>下次初始</th></tr></thead>
+                        <tbody id="sTbl"></tbody>
+                    </table>
+                </div>
+                <div class="tip" id="sTip"><strong>返还规则：</strong>第N次大招完成后获得额外能量，用于下一次大招初始</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<button class="fab" onclick="toggleDrawer()">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>
+</button>
+
+<div class="backdrop" id="bd" onclick="toggleDrawer()"></div>
+
+<div class="drawer" id="drawer">
+    <div class="drawer-head">历史记录 <button onclick="clearHist()" style="font-size:.68rem;color:var(--text-3);background:0;border:0;cursor:pointer">清空</button></div>
+    <div class="drawer-body" id="histList"><div style="text-align:center;color:var(--text-3);padding:24px;font-size:.75rem">暂无记录</div></div>
+</div>
+
+<script>
+// 原始数值显示：保留最多10位小数，去掉末尾无意义0
+function raw(n){
+    if(n===0)return'0';
+    var s=(+n).toFixed(10);
+    return s.replace(/\.?0+$/,'')
+}
+function $(id){return document.getElementById(id)}
+function v(id){return parseFloat($(id).value)||0}
+function c(id){return $(id).checked}
+
+var ind=$('indicator');
+function setInd(el){
+    var i=parseInt(el.dataset.i),w=el.offsetWidth;
+    ind.style.width=w+'px';
+    ind.style.left=(i*(w+2)+3)+'px'
+}
+setInd(document.querySelector('.tab.active'));
+
+$('tabs').querySelectorAll('.tab').forEach(function(t){
+    t.onclick=function(){
+        $('tabs').querySelectorAll('.tab').forEach(function(x){x.classList.remove('active')});
+        document.querySelectorAll('.mode').forEach(function(x){x.classList.remove('active')});
+        t.classList.add('active');
+        setInd(t);
+        $(t.dataset.m+'Mode').classList.add('active')
+    }
+});
+
+document.querySelectorAll('.nitro-grid').forEach(function(g){
+    g.querySelectorAll('.nitro').forEach(function(o){
+        o.onclick=function(){
+            g.querySelectorAll('.nitro').forEach(function(x){x.classList.remove('active')});
+            o.classList.add('active');
+            triggerCalc(g.id==='nNitroType'?'normal':'solo')
+        }
+    })
+});
+
+$('nEmp').querySelectorAll('.ritem').forEach(function(r){
+    r.onclick=function(){
+        $('nEmp').querySelectorAll('.ritem').forEach(function(x){x.classList.remove('active')});
+        r.classList.add('active');
+        r.querySelector('input').checked=true;
+        $('nCustom').classList.toggle('hide',r.querySelector('input').value!=='c');
+        triggerCalc('normal')
+    }
+});
+
+document.addEventListener('focusin',function(e){
+    var f=e.target.closest('.field');
+    if(f&&f.dataset.group)f.classList.add('focus')
+});
+document.addEventListener('focusout',function(e){
+    var f=e.target.closest('.field');
+    if(f)f.classList.remove('focus')
+});
+
+var calcTimer=null;
+function triggerCalc(mode){
+    clearTimeout(calcTimer);
+    calcTimer=setTimeout(function(){
+        if(mode==='normal')calcNormal();
+        else calcSolo()
+    },80)
+}
+document.addEventListener('input',function(e){
+    var el=e.target;
+    if(el.dataset.group)triggerCalc(el.dataset.group);
+    var f=el.closest('.field');
+    if(f&&f.dataset.group)triggerCalc(f.dataset.group)
+});
+
+/* ========== 排位模式 ========== */
+function calcNormal(){
+    var s=v('nStart'),n=v('nNitro'),cnt=v('nCnt'),hui=v('nHui'),xian=v('nXian'),
+        mx=v('nMax')||100,sp=c('nSpec'),jj=c('nJJ'),eff=v('nEff'),emp=0,
+        rd=document.querySelector('input[name="emp"]:checked');
+    if(rd)emp=rd.value==='c'?v('nCE'):(parseFloat(rd.value)||0);
+    
+    var has=s>0||n>0||xian>0||emp>0;
+    if(!has){
+        $('nInstant').classList.add('hide');
+        $('nNeedWrap').classList.add('hide');
+        $('nv1').textContent=$('nv2').textContent=$('nv3').textContent='--';
+        return
+    }
+    
+    var cm=1-cnt/100,ef=1+(jj?.05:0)+eff/100,
+        tS=s+xian*cm+emp*cm,
+        sF=(n*(1+hui/100)+(sp?10:0))*cm*ef,
+        r=parseFloat($('nNitroType').querySelector('.active').dataset.r),
+        sig=sF*r,
+        gap=Math.max(0,mx-tS),
+        can=tS>=mx,
+        need=can?0:(sig<=0?'∞':Math.ceil(gap/sig)),
+        total=tS+(need==='∞'||need===0?0:need*sig),
+        over=Math.max(0,total-mx);
+    
+    $('nv1').textContent=sF.toFixed(2);
+    $('nv2').textContent=(sF*.5).toFixed(2);
+    $('nv3').textContent=(sF*r).toFixed(2);
+    
+    if(can){
+        $('nInstant').classList.remove('hide');
+        $('nNeedWrap').classList.add('hide')
+    }else{
+        $('nInstant').classList.add('hide');
+        $('nNeedWrap').classList.remove('hide');
+        $('nRes').textContent=need;
+        $('nSE').textContent=raw(tS);
+        $('nSig').textContent=raw(sig);
+        $('nOver').textContent=raw(over);
+        $('nGap').textContent=raw(gap);
+        
+        var h='';
+        if(sig>0){
+            for(var i=1;i<=Math.min(need+2,6);i++){
+                var e=i*sig,rm=gap-e,st='';
+                if(i<need)st='还差 '+raw(Math.abs(rm));
+                else if(i===need)st='<span style="color:var(--green)">刚好满足</span>';
+                else st='<span style="color:var(--orange)">溢出 '+raw(Math.abs(rm))+'</span>';
+                h+='<tr><td>'+i+'罐</td><td>'+raw(e)+'</td><td>'+st+'</td></tr>'
+            }
+        }else h='<tr><td colspan="3" style="color:var(--orange)">氮气能量为0</td></tr>';
+        $('nDiffTbl').innerHTML=h
+    }
+}
+
+/* ========== 单刷模式 ========== */
+function calcSolo(){
+    var s=v('sStart'),n=v('sNitro'),xian=v('sXian'),hui=v('sHui'),
+        sp=c('sSpec'),thr=v('sThr')||100,mx=parseInt($('sMax').value)||9,
+        baseRet=v('sBaseRet'),retInt=parseInt(v('sRetInt'))||1,retAmt=v('sRetAmt');
+    
+    var has=s>0||n>0||xian>0||baseRet>0;
+    if(!has){
+        $('sv1').textContent=$('sv2').textContent=$('sv3').textContent='--';
+        $('sTbl').innerHTML='';
+        $('sTotal').textContent='0罐';
+        return
+    }
+    
+    var sF=n*(1+hui/100)+(sp?10:0),
+        r=parseFloat($('sNitroType').querySelector('.active').dataset.r),
+        sig=sF*r;
+    
+    $('sv1').textContent=sF.toFixed(2);
+    $('sv2').textContent=(sF*.5).toFixed(2);
+    $('sv3').textContent=(sF*r).toFixed(2);
+    
+    var html='',total=0,cur=s+xian,stop=false;
+    
+    for(var i=1;i<=mx;i++){
+        if(stop){
+            html+='<tr><td colspan="7" class="c-gray">无法继续</td></tr>';
+            break
+        }
+        
+        var need=0,rel=0,ov=0,nxt=0;
+        
+        if(cur<thr){
+            if(sig<=0){
+                need='∞';
+                stop=true
+            }else{
+                need=Math.ceil((thr-cur)/sig);
+                rel=cur+need*sig;
+                ov=Math.max(0,rel-100);
+                nxt=ov+baseRet;
+                total+=need
+            }
+        }else{
+            rel=cur;
+            ov=Math.max(0,cur-100);
+            nxt=ov+baseRet
+        }
+        
+        var gotExtra=false;
+        if(retInt>0&&i%retInt===0&&need!=='∞'){
+            nxt+=retAmt;
+            gotExtra=true
+        }
+        
+        var bonusH=gotExtra?' <span style="color:var(--primary);font-size:.58rem">+'+raw(retAmt)+'</span>':'';
+        var ovH=ov>0?'<span class="c-orange">+'+raw(ov)+'</span>':'<span class="c-gray">0</span>';
+        var retH=baseRet>0?'<span class="c-green">+'+raw(baseRet)+'</span>':'<span class="c-gray">0</span>';
+        
+        html+='<tr>'+
+            '<td class="hl">'+i+bonusH+'</td>'+
+            '<td class="hl">'+need+'</td>'+
+            '<td>'+raw(sig)+'</td>'+
+            '<td>'+raw(rel)+'</td>'+
+            '<td>'+ovH+'</td>'+
+            '<td>'+retH+'</td>'+
+            '<td class="c-green">'+raw(nxt)+'</td>'+
+        '</tr>';
+        
+        cur=nxt;
+        if(need==='∞')break
+    }
+    
+    $('sTbl').innerHTML=html;
+    $('sTotal').textContent=total+'罐'
+}
+
+function clearAll(){
+    document.querySelectorAll('input[type="number"]').forEach(function(i){
+        if(['nMax','sThr','sMax','sRetInt','sRetAmt','sBaseRet'].indexOf(i.id)===-1)i.value=''
+    });
+    document.querySelectorAll('input[type="checkbox"]').forEach(function(i){i.checked=false});
+    $('sBaseRet').value='0';
+    $('sRetInt').value='2';
+    $('sRetAmt').value='0';
+    $('nEmp').querySelectorAll('.ritem').forEach(function(r,i){
+        r.classList.toggle('active',i===0);
+        r.querySelector('input').checked=i===0
+    });
+    $('nCustom').classList.add('hide');
+    calcNormal();
+    calcSolo()
+}
+
+function save(type,res){
+    var h=JSON.parse(localStorage.getItem(K)||'[]');
+    h.unshift({t:new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}),type:type,res:res});
+    if(h.length>20)h.length=20;
+    localStorage.setItem(K,JSON.stringify(h));
+    render()
+}
+
+function render(){
+    var h=JSON.parse(localStorage.getItem(K)||'[]'),el=$('histList');
+    if(!h.length){
+        el.innerHTML='<div style="text-align:center;color:var(--text-3);padding:24px;font-size:.75rem">暂无记录</div>';
+        return
+    }
+    el.innerHTML=h.map(function(x,i){
+        return'<div class="h-entry" data-i="'+i+'"><div class="t">'+x.t+' · '+x.type+'</div><div class="r">'+x.res+'</div></div>'
+    }).join('');
+    el.querySelectorAll('.h-entry').forEach(function(e){
+        e.onclick=function(){
+            document.querySelector('.tab[data-m="'+({'排位':'normal','单刷':'solo'}[h[e.dataset.i].type])+'"]').click();
+            toggleDrawer()
+        }
+    })
+}
+
+function clearHist(){
+    localStorage.removeItem(K);
+    render()
+}
+
+function toggleDrawer(){
+    $('drawer').classList.toggle('open');
+    $('bd').classList.toggle('show')
+}
+
+render();
+calcNormal();
+calcSolo();
+</script>
+</body>
+</html>
